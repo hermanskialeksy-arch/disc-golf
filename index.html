@@ -120,7 +120,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
   <ul class="hint">
     <li>Trzymaj telefon ekranem do góry, górą w stronę rzutu – jak dysk.</li>
     <li><b>Wciśnij i trzymaj</b>: obracając telefon celujesz, przechył ustawia <b>hyzer / anhyzer</b> – widzisz go na wskaźniku na środku ekranu.</li>
-    <li>Potem zamach i <b>puść</b> przy wyrzucie. Szybkość ruchu = prędkość, strzał nadgarstka = spin, czysty płaski ruch = mały wobble, pochylenie przodu = nos.</li>
+    <li>Potem zamach – <b>trzymaj przycisk przez cały rzut</b>, dysk wyleci sam w najszybszym momencie (telefon zostaje w dłoni). W ustawieniach możesz wrócić do wyrzutu puszczeniem przycisku. Szybkość ruchu = prędkość, strzał nadgarstka = spin, czysty płaski ruch = mały wobble, pochylenie przodu = nos.</li>
     <li>Puszczasz za wcześnie / za późno → dysk wychodzi w bok, jak w prawdziwym rzucie.</li>
     <li>Bez czujników (komputer): przytrzymaj przycisk lub spację – miernik mocy – i puść.</li>
   </ul>
@@ -138,7 +138,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
   <div class="sl"><span>Nadgarstek – rotacja (spin)</span><b id="vWr">100%</b><input id="iWr" type="range" min="50" max="200" step="5"><small>Ile obrotów daje strzał nadgarstkiem przy wyrzucie</small></div>
   <div class="sl"><span>Kąty – hyzer i nos</span><b id="vAn">100%</b><input id="iAn" type="range" min="50" max="200" step="5"><small>100% = przechył telefonu 1:1 z przechyłem dysku. Wyżej = mniejszy ruch nadgarstka daje większy kąt.</small></div>
   <div class="sl"><span>Martwa strefa „płasko”</span><b id="vDz">2°</b><input id="iDz" type="range" min="0" max="10" step="1"><small>Przechył mniejszy niż ta wartość liczy się jako rzut płaski</small></div>
-  <div class="row" style="justify-content:center;margin:6px 0"><button id="bAimPh" class="glass">📱 Celowanie telefonem</button><button id="bLnch" class="glass">↗ Launch z zamachu</button></div>
+  <div class="row" style="justify-content:center;margin:6px 0"><button id="bAuto" class="glass">🖐 Wyrzut automatyczny</button><button id="bAimPh" class="glass">📱 Celowanie telefonem</button><button id="bLnch" class="glass">↗ Launch z zamachu</button></div>
   <div class="row" style="justify-content:center;margin:6px 0"><div class="seg"><button id="uK">km/h</button><button id="uM">mph</button></div><button id="bVoice" class="glass">🔊 Głos</button><button id="bCal2" class="glass">🎯 Kalibruj</button></div>
   <p style="font-size:11px;text-align:left;opacity:.75;margin:4px 0">Kalibracja jest opcjonalna: zapisuje Twój naturalny chwyt jako „płasko, nos 0”. Bez niej płasko = ekran dokładnie poziomo.</p>
   <button class="btn" id="setOk">GOTOWE</button></div>
@@ -325,7 +325,7 @@ const DI = Object.fromEntries(DISCS.map(d=>[d.id,d]));
 
 // ---------------- save ----------------
 const SAVE_KEY = 'dgpov_v1';
-const SV = { hand:'R', gentle:false, cT:0, cP:0, cal:false, best:null, sw:1, wr:1, an:1, dz:2, unit:'kmh', voice:false, hist:[], arm:60, aimPh:true, lnch:true };
+const SV = { hand:'R', gentle:false, cT:0, cP:0, cal:false, best:null, sw:1, wr:1, an:1, dz:2, unit:'kmh', voice:false, hist:[], autoRel:true, arm:60, aimPh:true, lnch:true };
 try { Object.assign(SV, JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')); } catch(e){}
 if (!Array.isArray(SV.hist)) SV.hist = [];
 function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(SV)); } catch(e){} }
@@ -578,16 +578,16 @@ const fingerJoints = [];
   const fa = rod(fore, skin, 0, 0, 0.17, 0.032, 0.042, 0.34); fa.rotation.x = Math.PI/2; fa.scale.x = 0.85;
   const sl = rod(fore, sleeve, 0, 0, 0.42, 0.06, 0.065, 0.2); sl.rotation.x = Math.PI/2;
   // palm under the disc, fingers curled under the rim, thumb on top (backhand power grip)
-  blob(wrist, skin, 0, -0.015, -0.02, 0.04, 0.018, 0.05);
-  for (let k=0;k<4;k++){ const x = -0.03 + k*0.02, g1 = new THREE.Group(); g1.position.set(x, -0.022, -0.065); wrist.add(g1); let g = g1; const L = [0.026,0.02,0.016];
+  blob(wrist, skin, 0, -0.055, 0.015, 0.04, 0.016, 0.045);
+  for (let k=0;k<4;k++){ const x = -0.03 + k*0.02, g1 = new THREE.Group(); g1.position.set(x, -0.032, -0.065); wrist.add(g1); let g = g1; const L = [0.026,0.02,0.016];
     L.forEach((l, j)=>{ const rr = 0.0085 - j*0.0008; blob(g, skin, 0, 0, 0, rr, rr, rr); const s = rod(g, skin, 0, 0, -l/2, rr*0.95, rr, l); s.rotation.x = Math.PI/2; if (j < 2){ const n = new THREE.Group(); n.position.z = -l; g.add(n); g = n; fingerJoints.push(n); } else blob(g, skin, 0, 0, -l, rr*0.9, rr*0.9, rr*0.9); });
     fingerJoints.push(g1); }
-  const th = new THREE.Group(); th.position.set(0.035, 0.004, -0.03); th.rotation.y = 0.5; wrist.add(th);
+  const th = new THREE.Group(); th.position.set(0.03, 0.032, -0.02); th.rotation.set(-0.22, 0.5, 0); wrist.add(th);
   blob(th, skin, 0, 0, 0, 0.012, 0.011, 0.012); const t1 = rod(th, skin, 0, 0, -0.022, 0.0095, 0.011, 0.044); t1.rotation.x = Math.PI/2; blob(th, skin, 0, 0, -0.045, 0.009, 0.009, 0.01);
   arm.traverse(o=>{ if (o.isMesh) o.castShadow = false; });
 }
-handDisc.position.set(-0.01, 0.0, -0.13); handDisc.rotation.x = 0.25; // disc rim sits in the hand, tilted toward the eye
-fingerJoints.forEach(j=>{ j.rotation.x = 0.45; });
+handDisc.position.set(-0.01, 0.015, -0.14); handDisc.rotation.x = 0.25; // disc lies on the fingers, thumb on the flight plate – nothing passes through it
+fingerJoints.forEach(j=>{ j.rotation.x = 0; });
 const ARM_REST = new THREE.Vector3(0.1, -0.2, -0.5);
 arm.position.copy(ARM_REST);
 
@@ -696,12 +696,16 @@ window.addEventListener('devicemotion', e=>{ const rr = e.rotationRate, la = e.a
   }
   const wv = MV.wv, wl = Math.hypot(wv[0], wv[1], wv[2]) || 1;
   MV.buf.push({ t, w, a, v:vm, vv:MV.v.slice(), z: w*Math.abs(wv[2])/wl, off: w*Math.hypot(wv[0], wv[1])/wl, R:MV.R }); if (MV.buf.length > 300) MV.buf.shift();
-  if (MV.phase === 'swing'){ const p = powerOf(w, a, vm); if (p > MV.peak){ MV.peak = p; MV.tPeak = t; } setArc(MV.peak); }
+  if (MV.phase === 'swing'){ const p = powerOf(w, a, vm); if (p > MV.peak){ MV.peak = p; MV.tPeak = t; } setArc(MV.peak);
+    // automatic release: the disc leaves the hand just after the fastest moment of the swing – the thumb stays on the button
+    if (w > MV.wPk){ MV.wPk = w; MV.tW = t; }
+    if (SV.autoRel !== false && !MV.thrown && S.state === 'aim' && t - MV.swingT > 110 && MV.wPk > Math.max(200, 0.22*limits().W1) && w < MV.wPk*0.6 && t - MV.tW > 20){
+      MV.thrown = true; MV.phase = 'done'; if (navigator.vibrate) try { navigator.vibrate(35); } catch(_){} releaseAt(Math.min(t, MV.tW + 25), 'swing'); } }
 });
 function startSwing(t){
-  MV.phase = 'swing'; MV.swingT = t; MV.quietT = 0; MV.peak = 0; MV.tPeak = 0;
+  MV.phase = 'swing'; MV.swingT = t; MV.quietT = 0; MV.peak = 0; MV.tPeak = 0; MV.wPk = 0; MV.tW = t;
   const c = MV.calm || { head:MV.head0, yaw:S.yaw }; MV.F = c.head; if (SV.aimPh) S.yaw = c.yaw; prevDirty = true;
-  msg('Zamach… <b>puść</b> w momencie wyrzutu', 0);
+  msg(SV.autoRel !== false ? 'Zamach… <b>trzymaj przycisk</b> – dysk wyleci sam' : 'Zamach… <b>puść</b> w momencie wyrzutu', 0);
 }
 async function askPerm(){
   if (MV.perm) return; MV.perm = true;
@@ -722,7 +726,7 @@ hold.addEventListener('pointercancel', ()=>endHold(true));
 window.addEventListener('keydown', e=>{ if (e.code==='Space' && !e.repeat && S.state==='aim'){ e.preventDefault(); audio(); startHold(true); } });
 window.addEventListener('keyup', e=>{ if (e.code==='Space') endHold(false); });
 function startHold(keyboard){
-  if (MV.held) return; hideMetrics(); MV.held = true; MV.buf = []; MV.peak = 0; MV.tPeak = 0; MV.t0 = performance.now(); MV.v = [0,0,0]; MV.calmT = 0; hold.classList.add('on'); setArc(0);
+  if (MV.held) return; hideMetrics(); MV.held = true; MV.thrown = false; MV.buf = []; MV.peak = 0; MV.tPeak = 0; MV.t0 = performance.now(); MV.v = [0,0,0]; MV.calmT = 0; hold.classList.add('on'); setArc(0);
   useFallback(keyboard || !(MV.got && MV.motion && MV.R));
   if (MV.fallback){ MV.phase = 'meter'; $('meter').classList.remove('hide'); msg('Puść, gdy miernik mocy jest tam, gdzie chcesz', 0); }
   else { MV.phase = 'aim'; const h = headOf(MV.R); MV.head0 = h != null ? h : MV.lastHead; MV.yaw0 = S.yaw; MV.calm = { head:MV.head0, yaw:S.yaw, t:MV.t0 }; MV.F = null;
@@ -739,27 +743,33 @@ function endHold(cancel){
   if (!MV.held) return; MV.held = false; hold.classList.remove('on'); $('meter').classList.add('hide');
   const phase = MV.phase; MV.phase = 'idle';
   if (cancel || S.state!=='aim'){ setArc(0); $('msg').classList.add('hide'); return; }
+  if (MV.thrown){ MV.thrown = false; return; }               // the disc already left the hand during the swing
   const now = performance.now();
   if (MV.fallback){ const p = fallbackPower(); if (p < 0.04){ setArc(0); msg('Za mało mocy', 1500); return; }
     throwDisc(measure(p, null, +$('tilt').value, -1.5)); setTimeout(()=>setArc(0), 500); return; }
-  const rec = MV.buf.filter(q=>now - q.t < 450 && q.t >= MV.swingT - 60); let wP = 0, aP = 0, vP = 0; rec.forEach(q=>{ wP = Math.max(wP, q.w); aP = Math.max(aP, q.a); vP = Math.max(vP, q.v); });
+  releaseAt(now, phase);
+}
+function releaseAt(now, phase){
+  const B = MV.buf.filter(q=>q.t <= now + 1);
+  const rec = B.filter(q=>now - q.t < 450 && q.t >= MV.swingT - 60); let wP = 0, aP = 0, vP = 0; rec.forEach(q=>{ wP = Math.max(wP, q.w); aP = Math.max(aP, q.a); vP = Math.max(vP, q.v); });
   const p = powerOf(wP, aP, vP);
-  if (phase !== 'swing' || now - MV.t0 < 120 || p < 0.06){ setArc(0); msg(phase !== 'swing' ? 'Najpierw <b>zamach</b> – puść przycisk w trakcie machnięcia' : 'Za słaby ruch – zrób zamach i <b>puść w trakcie machnięcia</b>', 2200); return; }
+  if (phase !== 'swing' || now - MV.t0 < 120 || p < 0.06){ MV.thrown = false; setArc(0); msg(phase !== 'swing' ? 'Najpierw <b>zamach</b> – puść przycisk w trakcie machnięcia' : 'Za słaby ruch – zrób zamach i <b>puść w trakcie machnięcia</b>', 2200); return; }
   const head = MV.F != null ? MV.F : MV.lastHead;
   // angles at release: average over the last ~0.1 s before the thumb lifts
-  let last = MV.buf.filter(q=>now - q.t < 120 && now - q.t > 8 && q.R); if (!last.length) last = [MV.buf[MV.buf.length-1] || { R:MV.R }];
+  let last = B.filter(q=>now - q.t < 120 && now - q.t > 8 && q.R); if (!last.length) last = [B[B.length-1] || { R:MV.R }];
   let rel = 0, nose = 0; last.forEach(q=>{ const A = anglesFrom(q.R || MV.R, head); rel += A.rel; nose += A.nose; }); rel /= last.length; nose /= last.length;
   const late = MV.tPeak ? Math.max(0, (now - MV.tPeak)/1000 - 0.16) : 0;
   // wrist snap = rotation about the screen normal (the disc's spin axis) in the last moments before release;
   // rotation about the other two axes at release = off-axis torque → wobble
-  const snap = MV.buf.filter(q=>now - q.t < 160); let wrist = 0, offS = 0, onS = 0;
+  const snap = B.filter(q=>now - q.t < 160); let wrist = 0, offS = 0, onS = 0;
   snap.forEach(q=>{ wrist = Math.max(wrist, q.z); offS += q.off; onS += q.z; });
   // hand velocity at release → launch angle (up/down) and release direction (left/right of the aim)
-  const vl = MV.buf.filter(q=>now - q.t < 70); const vv = [0,0,0]; vl.forEach(q=>{ for (let i=0;i<3;i++) vv[i] += q.vv[i]/vl.length; });
+  const vl = B.filter(q=>now - q.t < 70); const vv = [0,0,0]; vl.forEach(q=>{ for (let i=0;i<3;i++) vv[i] += q.vv[i]/vl.length; });
   const Fw = [-Math.sin(head), Math.cos(head)], Lw = [-Math.cos(head), -Math.sin(head)], fwd = vv[0]*Fw[0] + vv[1]*Fw[1], lat = vv[0]*Lw[0] + vv[1]*Lw[1], vH = Math.hypot(vv[0], vv[1], vv[2]);
   const sw = { wrist, offAx: snap.length ? offS/(offS + onS + 1) : 0.2, late,
     launchM: vH > 1.2 && fwd > 0.5 ? Math.atan2(vv[2], Math.hypot(fwd, lat))/D2R : null,
     dirM: vH > 1.5 && fwd > 0.8 ? Math.atan2(-lat, fwd)/D2R : null };
+  if (MV.thrown){ hold.classList.remove('on'); $('msg').classList.add('hide'); }
   throwDisc(measure(p, sw, rel, nose));
   setTimeout(()=>setArc(0), 500);
 }
@@ -1008,10 +1018,11 @@ function renderSet(){ $('iArm').value = SV.arm || 60; $('vArm').textContent = `$
   $('iSw').value = Math.round((SV.sw||1)*100); $('vSw').textContent = $('iSw').value + '%'; $('iWr').value = Math.round((SV.wr||1)*100); $('vWr').textContent = $('iWr').value + '%';
   $('iAn').value = Math.round((SV.an||1)*100); $('vAn').textContent = $('iAn').value + '%'; $('iDz').value = SV.dz; $('vDz').textContent = SV.dz + '°';
   $('uK').classList.toggle('on', SV.unit!=='mph'); $('uM').classList.toggle('on', SV.unit==='mph'); $('bVoice').classList.toggle('on', !!SV.voice);
-  $('bAimPh').classList.toggle('on', !!SV.aimPh); $('bLnch').classList.toggle('on', !!SV.lnch); }
+  $('bAimPh').classList.toggle('on', !!SV.aimPh); $('bAuto').classList.toggle('on', SV.autoRel !== false); $('bAuto').textContent = SV.autoRel !== false ? '🖐 Wyrzut: automatyczny' : '🖐 Wyrzut: puszczeniem przycisku'; $('bLnch').classList.toggle('on', !!SV.lnch); }
 for (const [id, key, div] of [['iArm','arm',1],['iSw','sw',100],['iWr','wr',100],['iAn','an',100],['iDz','dz',1]]) $(id).oninput = ()=>{ SV[key] = +$(id).value/div; save(); renderSet(); prevDirty = true; };
 $('uK').onclick = ()=>{ SV.unit = 'kmh'; save(); renderSet(); }; $('uM').onclick = ()=>{ SV.unit = 'mph'; save(); renderSet(); };
 $('bVoice').onclick = ()=>{ SV.voice = !SV.voice; save(); renderSet(); };
+$('bAuto').onclick = ()=>{ SV.autoRel = SV.autoRel === false; save(); renderSet(); msg(SV.autoRel ? 'Trzymasz przycisk przez cały rzut – dysk wylatuje sam w najszybszym momencie zamachu' : 'Dysk wylatuje, gdy puścisz przycisk', 2600); };
 $('bAimPh').onclick = ()=>{ SV.aimPh = !SV.aimPh; save(); renderSet(); };
 $('bLnch').onclick = ()=>{ SV.lnch = !SV.lnch; save(); renderSet(); };
 $('bCal2').onclick = ()=>calibrate();
@@ -1105,7 +1116,7 @@ function updateArm(dt, LA){
   arm.position.x += (tx*mirror - arm.position.x)*Math.min(1, dt*12); arm.position.y += (ty - arm.position.y)*Math.min(1, dt*12); arm.position.z += (tz - arm.position.z)*Math.min(1, dt*12);
   arm.rotation.y += (ry*mirror - arm.rotation.y)*Math.min(1, dt*10);
   handDisc.visible = S.state==='aim';
-  fingerJoints.forEach(j=>{ j.rotation.x += ((S.state==='aim' ? 0.55 : 0.15) - j.rotation.x)*Math.min(1, dt*8); });
+  fingerJoints.forEach(j=>{ j.rotation.x += ((S.state==='aim' ? 0 : -0.12) - j.rotation.x)*Math.min(1, dt*8); });
   if (MV.held && MV.fallback){ $('meterF').style.height = (fallbackPower()*100).toFixed(0)+'%'; setArc(fallbackPower()); }
 }
 function resize(){ const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w/h; camera.fov = w/h < 0.7 ? 74 : 62; camera.updateProjectionMatrix(); }
