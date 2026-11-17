@@ -37,12 +37,16 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
 .seg button.on,.row button.on{background:linear-gradient(180deg,#ffc04a,#ff9800);color:#2a1a00}
 #tiltBox{display:flex;align-items:center;gap:8px;border-radius:12px;padding:4px 10px;font-size:11px;font-weight:700}
 #tilt{flex:1;accent-color:#ff9f1c}
+#dirBox{display:flex;align-items:center;gap:6px;border-radius:14px;padding:4px 6px;font-size:12px;font-weight:800}
+#dirBox button{width:34px;height:30px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--tx);font-size:13px}
+#dirS{flex:1;min-width:60px;accent-color:#ffd36b;height:28px}
+#dirV{min-width:44px;text-align:center}
 #hold{flex:none;width:118px;height:118px;border-radius:50%;border:3px solid rgba(255,255,255,.85);background:radial-gradient(circle at 40% 35%,#ffd36b,#ff9800 60%,#c56a00);color:#2a1a00;font:900 15px Inter,system-ui,sans-serif;letter-spacing:.05em;box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 -6px 14px rgba(0,0,0,.25);position:relative;touch-action:none}
 #hold small{display:block;font-size:10px;font-weight:700;opacity:.8;margin-top:2px;letter-spacing:0}
 #hold.on{background:radial-gradient(circle at 40% 35%,#a8f59a,#2fbf71 60%,#14743f);color:#04220f;transform:scale(1.05)}
 #ring{position:absolute;inset:-10px;pointer-events:none}
-#tiltG{position:fixed;left:50%;top:53%;transform:translateX(-50%);width:210px;border-radius:16px;padding:4px 10px 6px;text-align:center;pointer-events:none;z-index:7;transition:transform .15s,top .15s}
-#tiltG.big{transform:translateX(-50%) scale(1.22);top:50%}
+#tiltG{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom) + 178px);transform-origin:left bottom;width:176px;border-radius:16px;padding:4px 10px 6px;text-align:center;pointer-events:none;z-index:7;transition:transform .15s}
+#tiltG.big{transform:scale(1.12)}
 #tiltG svg{display:block;width:100%;height:44px}
 #tgL{font-size:17px;font-weight:900;letter-spacing:.06em;line-height:1.1}
 #tgS{font-size:11px;font-weight:700;opacity:.85;margin-top:1px}
@@ -101,6 +105,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
 <div id="ctl" class="hide">
   <div id="leftCol">
     <div id="tiltBox" class="glass hide"><span>Anhyzer</span><input id="tilt" type="range" min="-80" max="80" value="0"><span>Hyzer</span></div>
+    <div id="dirBox" class="glass"><button id="dL">◀</button><input id="dirS" type="range" min="-60" max="60" step="1" value="0"><button id="dR">▶</button><span id="dirV">0°</span></div>
     <div class="row">
       <div class="seg"><button id="bBH" class="on">BH</button><button id="bFH">FH</button></div>
       <button id="bCal" class="glass">🎯 Kalibruj</button>
@@ -138,7 +143,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
   <div class="sl"><span>Nadgarstek – rotacja (spin)</span><b id="vWr">100%</b><input id="iWr" type="range" min="50" max="200" step="5"><small>Ile obrotów daje strzał nadgarstkiem przy wyrzucie</small></div>
   <div class="sl"><span>Kąty – hyzer i nos</span><b id="vAn">100%</b><input id="iAn" type="range" min="50" max="200" step="5"><small>100% = przechył telefonu 1:1 z przechyłem dysku. Wyżej = mniejszy ruch nadgarstka daje większy kąt.</small></div>
   <div class="sl"><span>Martwa strefa „płasko”</span><b id="vDz">2°</b><input id="iDz" type="range" min="0" max="10" step="1"><small>Przechył mniejszy niż ta wartość liczy się jako rzut płaski</small></div>
-  <div class="row" style="justify-content:center;margin:6px 0"><button id="bAuto" class="glass">🖐 Wyrzut automatyczny</button><button id="bFlip" class="glass">⇄ Odwróć hyzer/anhyzer</button><button id="bAimPh" class="glass">📱 Celowanie telefonem</button><button id="bLnch" class="glass">↗ Launch z zamachu</button></div>
+  <div class="row" style="justify-content:center;margin:6px 0"><button id="bAuto" class="glass">🖐 Wyrzut automatyczny</button><button id="bFlip" class="glass">⇄ Odwróć hyzer/anhyzer</button><button id="bAimPh" class="glass">📱 Celowanie telefonem</button><button id="bLnch" class="glass">↗ Launch z zamachu</button><button id="bDirS" class="glass">↔ Kierunek z zamachu</button></div>
   <div class="row" style="justify-content:center;margin:6px 0"><div class="seg"><button id="uK">km/h</button><button id="uM">mph</button></div><button id="bVoice" class="glass">🔊 Głos</button><button id="bCal2" class="glass">🎯 Kalibruj</button></div>
   <p style="font-size:11px;text-align:left;opacity:.75;margin:4px 0">Kalibracja jest opcjonalna: zapisuje Twój naturalny chwyt jako „płasko, nos 0”. Bez niej płasko = ekran dokładnie poziomo.</p>
   <button class="btn" id="setOk">GOTOWE</button></div>
@@ -327,6 +332,7 @@ const DI = Object.fromEntries(DISCS.map(d=>[d.id,d]));
 const SAVE_KEY = 'dgpov_v1';
 const SV = { hand:'R', gentle:false, cT:0, cP:0, cal:false, best:null, sw:1, wr:1, an:1, dz:2, unit:'kmh', voice:false, hist:[], autoRel:true, arm:60, aimPh:true, lnch:true };
 try { Object.assign(SV, JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')); } catch(e){}
+if (!SV.v6){ SV.aimPh = false; SV.dirSwing = false; SV.v6 = 1; }   // direction now comes from the slider – the swing no longer moves it
 if (!Array.isArray(SV.hist)) SV.hist = [];
 function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(SV)); } catch(e){} }
 
@@ -350,7 +356,7 @@ const SFX = {
 // ---------------- renderer / scene ----------------
 const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 1.75));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(68, 1, 0.05, 1600); scene.add(camera);
@@ -564,31 +570,45 @@ function setDiscLook(m, d){ m.userData.body.geometry = discGeo(d.type); m.userDa
 const flyDisc = makeDisc(); flyDisc.rotation.order = 'YXZ'; scene.add(flyDisc); flyDisc.visible = false;
 
 // ---------------- first-person arm and hand (child of the camera) ----------------
-const skin = new THREE.MeshStandardMaterial({ color:0xd9a27c, roughness:0.58, metalness:0 });
+const skin = new THREE.MeshStandardMaterial({ color:0xe0a582, roughness:0.62, metalness:0, emissive:0x3a1408, emissiveIntensity:0.35 });
 const sleeve = new THREE.MeshStandardMaterial({ color:0x262b63, roughness:0.75, metalness:0 });
 const arm = new THREE.Group(); camera.add(arm);
+{ const fill = new THREE.PointLight(0xfff1e0, 0.55, 1.4, 2); fill.position.set(-0.25, 0.15, 0.05); camera.add(fill); }   // soft fill so the hand never goes black in its own shadow
 const wrist = new THREE.Group(); arm.add(wrist);
-const handDisc = makeDisc(); wrist.add(handDisc);
+const dFrame = new THREE.Group(); dFrame.position.set(-0.08, 0.02, -0.03); dFrame.rotation.x = 0.1; wrist.add(dFrame);
+const handDisc = makeDisc(); dFrame.add(handDisc);
 const fingerJoints = [];
-{ const sph = new THREE.SphereGeometry(1, 14, 10);
-  const blob = (par, mat, x, y, z, sx, sy, sz)=>{ const m = new THREE.Mesh(sph, mat); m.position.set(x,y,z); m.scale.set(sx,sy,sz); par.add(m); return m; };
-  const rod = (par, mat, x, y, z, r0, r1, len)=>{ const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, len, 12), mat); m.position.set(x,y,z); par.add(m); return m; };
-  // forearm runs from the wrist back toward the lower right corner of the view
-  const fore = new THREE.Group(); fore.position.set(0, 0, 0); arm.add(fore);
-  const fa = rod(fore, skin, 0, 0, 0.17, 0.032, 0.042, 0.34); fa.rotation.x = Math.PI/2; fa.scale.x = 0.85;
-  const sl = rod(fore, sleeve, 0, 0, 0.42, 0.06, 0.065, 0.2); sl.rotation.x = Math.PI/2;
-  // palm under the disc, fingers curled under the rim, thumb on top (backhand power grip)
-  blob(wrist, skin, 0, -0.055, 0.015, 0.04, 0.016, 0.045);
-  for (let k=0;k<4;k++){ const x = -0.03 + k*0.02, g1 = new THREE.Group(); g1.position.set(x, -0.032, -0.065); wrist.add(g1); let g = g1; const L = [0.026,0.02,0.016];
-    L.forEach((l, j)=>{ const rr = 0.0085 - j*0.0008; blob(g, skin, 0, 0, 0, rr, rr, rr); const s = rod(g, skin, 0, 0, -l/2, rr*0.95, rr, l); s.rotation.x = Math.PI/2; if (j < 2){ const n = new THREE.Group(); n.position.z = -l; g.add(n); g = n; fingerJoints.push(n); } else blob(g, skin, 0, 0, -l, rr*0.9, rr*0.9, rr*0.9); });
-    fingerJoints.push(g1); }
-  const th = new THREE.Group(); th.position.set(0.03, 0.032, -0.02); th.rotation.set(-0.22, 0.5, 0); wrist.add(th);
-  blob(th, skin, 0, 0, 0, 0.012, 0.011, 0.012); const t1 = rod(th, skin, 0, 0, -0.022, 0.0095, 0.011, 0.044); t1.rotation.x = Math.PI/2; blob(th, skin, 0, 0, -0.045, 0.009, 0.009, 0.01);
+// backhand power grip built from capsules around the rim: thumb on the flight plate, fingers curled under the rim,
+// palm against the edge, forearm toward the lower corner (checked numerically – nothing passes through any disc profile)
+function gripCaps(phi){
+  const R = 0.107, c = Math.cos(phi), s = Math.sin(phi), er = [c, 0, s], et = [-s, 0, c];
+  const P = (r, y, t)=>[er[0]*r + et[0]*t, y, er[2]*r + et[2]*t];
+  const caps = [];
+  [-0.026, -0.009, 0.008, 0.024].forEach((t, i)=>{ const L = [1, 1.04, 1, 0.86][i];
+    const pts = [P(R + 0.012, -0.040, t*1.05), P(R - 0.006, -0.036, t), P(R - 0.026*L, -0.024, t*0.95), P(R - 0.048*L, -0.0135, t*0.9)];
+    const rr = [0.0098, 0.0088, 0.0078, 0.0072];
+    for (let k=0; k<3; k++) caps.push([pts[k], pts[k+1], rr[k], rr[k+1], 'skin']); });
+  caps.push([P(R + 0.026, -0.036, -0.022), P(R + 0.026, -0.036, 0.022), 0.017, 0.017, 'skin']);
+  caps.push([P(R + 0.028, -0.010, -0.018), P(R + 0.028, -0.012, 0.020), 0.018, 0.018, 'skin']);
+  caps.push([P(R + 0.030, 0.006, 0.002), P(R + 0.030, -0.030, 0.0), 0.02, 0.02, 'skin']);
+  const T = [P(R + 0.024, 0.010, 0.026), P(R + 0.004, 0.0215, 0.022), P(R - 0.018, 0.0235, 0.016), P(R - 0.036, 0.0235, 0.012)];
+  const tr = [0.0125, 0.0105, 0.0098, 0.0092]; for (let k=0; k<3; k++) caps.push([T[k], T[k+1], tr[k], tr[k+1], 'skin']);
+  const W = P(R + 0.045, -0.014, 0.004), E = [W[0] + 0.11, W[1] - 0.19, W[2] + 0.26];
+  caps.push([W, E, 0.03, 0.04, 'skin']);
+  const M = [W[0] + (E[0]-W[0])*0.78, W[1] + (E[1]-W[1])*0.78, W[2] + (E[2]-W[2])*0.78];
+  caps.push([M, [E[0] + 0.03, E[1] - 0.07, E[2] + 0.13], 0.052, 0.058, 'sleeve']);
+  return caps;
+}
+{ const sph = new THREE.SphereGeometry(1, 16, 12), up = new THREE.Vector3(0, 1, 0);
+  gripCaps(0.55).forEach(([a, b, ra, rb, kind])=>{
+    const mat = kind==='sleeve' ? sleeve : skin, A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), dx = b[0]-a[0], dy = b[1]-a[1], dz = b[2]-a[2], len = Math.hypot(dx, dy, dz), d = new THREE.Vector3(dx/len, dy/len, dz/len);
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(rb, ra, len, 14, 1, true), mat);
+    cyl.position.set((a[0]+b[0])/2, (a[1]+b[1])/2, (a[2]+b[2])/2); cyl.quaternion.setFromUnitVectors(up, d); dFrame.add(cyl);
+    [[A, ra], [B, rb]].forEach(([q, r])=>{ const m = new THREE.Mesh(sph, mat); m.position.copy(q); m.scale.setScalar(r); dFrame.add(m); });
+  });
   arm.traverse(o=>{ if (o.isMesh) o.castShadow = false; });
 }
-handDisc.position.set(-0.01, 0.015, -0.14); handDisc.rotation.x = 0.25; // disc lies on the fingers, thumb on the flight plate – nothing passes through it
-fingerJoints.forEach(j=>{ j.rotation.x = 0; });
-const ARM_REST = new THREE.Vector3(0.1, -0.2, -0.5);
+const ARM_REST = new THREE.Vector3(0.03, -0.2, -0.48);
 arm.position.copy(ARM_REST);
 
 // preview line (where the disc would fly with the current tilt and the last power)
@@ -606,17 +626,21 @@ function distToBasket(){ return Math.hypot(world.bx - S.lie.x, world.bz - S.lie.
 function styleKey(){ const d = distToBasket(); if (d < 18) return 'putt'; if (S.tech==='fh') return d < 50 ? 'forestand' : 'fore'; return d < 45 ? 'stand' : 'xstep'; }
 function msg(h, ms){ const el = $('msg'); el.innerHTML = h; el.classList.remove('hide'); clearTimeout(msg.t); if (ms) msg.t = setTimeout(()=>el.classList.add('hide'), ms); }
 function eye(){ return new THREE.Vector3(S.lie.x, groundH(S.lie.x, S.lie.z) + 1.66, S.lie.z); }
-function aimAtBasket(){ S.yaw = Math.atan2(world.bx - S.lie.x, world.bz - S.lie.z); const d = distToBasket(); S.pitch = d < 18 ? -0.05 : 0.02; }
+function aimAtBasket(){ S.yaw = S.baseYaw = Math.atan2(world.bx - S.lie.x, world.bz - S.lie.z); setDirUI(0); const d = distToBasket(); S.pitch = d < 18 ? -0.05 : 0.02; }
+// direction: a separate slider relative to the basket line (P = right, L = left) – the swing itself never changes it
+function setDirUI(v){ v = Math.round(v); const el = $('dirS'); if (el) el.value = v; const t = $('dirV'); if (t) t.textContent = v === 0 ? '0°' : Math.abs(v) + '° ' + (v > 0 ? 'P' : 'L'); }
+function setDir(v){ v = clamp(v, -60, 60); S.yaw = (S.baseYaw ?? S.yaw) - v*D2R; setDirUI(v); prevDirty = true; updHud(); }
+function syncDir(){ if (S.baseYaw == null) S.baseYaw = S.yaw; let v = wrapA(S.baseYaw - S.yaw)/D2R; if (Math.abs(v) > 60){ S.baseYaw = S.yaw; v = 0; } setDirUI(v); }
 function aimLaunch(){ return clamp(S.pitch*0.75 + 0.1, -0.08, 0.6) / D2R; }   // planned launch angle (deg) from where you look
 
-function startRange(){ S.mode = 'range'; $('start').classList.add('hide'); buildHole('range'); S.strokes = 0; S.lie = { x:0, z:0.6 }; S.fl = null; S.wind = { x:0, z:0, sp:0, a:0 }; S.yaw = 0; S.pitch = 0.05; S.disc = 'd1'; renderDiscs(); enterAim(); msg('<b>Trening</b> – rzucaj, patrz na pomiary i tor lotu. Kosz stoi na 80 m.', 3500); }
+function startRange(){ S.mode = 'range'; $('start').classList.add('hide'); buildHole('range'); S.strokes = 0; S.lie = { x:0, z:0.6 }; S.fl = null; S.wind = { x:0, z:0, sp:0, a:0 }; S.yaw = S.baseYaw = 0; setDirUI(0); S.pitch = 0.05; S.disc = 'd1'; renderDiscs(); enterAim(); msg('<b>Trening</b> – rzucaj, patrz na pomiary i tor lotu. Kosz stoi na 80 m.', 3500); }
 function startRound(){
   S.mode = 'round'; S.scores = []; S.hole = 0; $('start').classList.add('hide'); $('sc').classList.add('hide'); startHole(0);
 }
 function startHole(i){
   S.hole = i; buildHole(i); S.strokes = 0; S.lie = { x:0, z:0.6 }; S.fl = null;
   const r = mulberry(i*31+7+Date.now()%1000); const a = r()*Math.PI*2, sp = r()*3.2; S.wind = { x:Math.sin(a)*sp, z:Math.cos(a)*sp, sp, a:r()*6 };
-  aimAtBasket(); S.yaw = Math.atan2(H.path[1][0], H.path[1][1]); S.pitch = 0.03;
+  aimAtBasket(); S.yaw = Math.atan2(H.path[1][0], H.path[1][1]); syncDir(); S.pitch = 0.03;
   autoDisc(); enterAim(); msg(`<b>Dołek ${i+1}</b> · ${H.name} · ${H.len} m · par ${H.par}`, 2600);
 }
 function autoDisc(){ if (S.mode==='range'){ renderDiscs(); return; } const d = distToBasket(); S.disc = d < 18 ? 'p1' : d < 45 ? 'm1' : d < 75 ? 'f1' : d < 100 ? 'f2' : 'd1'; renderDiscs(); }
@@ -736,7 +760,7 @@ function startHold(keyboard){
 function updateAimHold(){ // the phone heading steers the view while you aim (before the swing)
   if (!MV.held || MV.fallback || MV.phase !== 'aim' || !SV.aimPh || !MV.R || S.state !== 'aim') return;
   const h = headOf(MV.R); if (h == null) return;
-  const ny = MV.yaw0 + wrapA(h - MV.head0); if (Math.abs(ny - S.yaw) > 0.002){ S.yaw = ny; prevDirty = true; updHud(); }
+  const ny = MV.yaw0 + wrapA(h - MV.head0); if (Math.abs(ny - S.yaw) > 0.002){ S.yaw = ny; syncDir(); prevDirty = true; updHud(); }
 }
 function fallbackPower(){ const t = (performance.now() - MV.t0)/1000, u = (t / 1.2) % 2; return u < 1 ? u : 2 - u; }
 function endHold(cancel){
@@ -779,6 +803,11 @@ function calibrate(){ return askPerm().then(()=>new Promise(res=>setTimeout(()=>
 $('bCal').onclick = ()=>calibrate();
 $('bGentle').onclick = ()=>{ SV.gentle = !SV.gentle; save(); $('bGentle').classList.toggle('on', SV.gentle); msg(SV.gentle ? 'Delikatny zamach: pełna moc przy spokojniejszym ruchu' : 'Pełny zamach', 1600); };
 $('bAim').onclick = ()=>{ if (S.state==='aim'){ aimAtBasket(); prevDirty = true; updHud(); } };
+$('dirS').oninput = e=>{ if (S.state==='aim') setDir(+e.target.value); };
+['dL', 'dR'].forEach((id, i)=>{ let tm = null; const step = ()=>{ if (S.state==='aim') setDir(+$('dirS').value + (i ? 1 : -1)); };
+  const stop = ()=>{ clearTimeout(tm); clearInterval(tm); tm = null; };
+  $(id).addEventListener('pointerdown', e=>{ e.preventDefault(); step(); stop(); tm = setTimeout(()=>{ tm = setInterval(step, 70); }, 380); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev=>$(id).addEventListener(ev, stop)); });
 $('bBH').onclick = ()=>{ S.tech = 'bh'; $('bBH').classList.add('on'); $('bFH').classList.remove('on'); prevDirty = true; };
 $('bFH').onclick = ()=>{ S.tech = 'fh'; $('bFH').classList.add('on'); $('bBH').classList.remove('on'); prevDirty = true; };
 $('tilt').oninput = ()=>{ prevDirty = true; };
@@ -798,7 +827,7 @@ async function checkSensors(){ await askPerm(); setTimeout(()=>{ if (!MV.motion 
 let look = null;
 canvas.addEventListener('pointerdown', e=>{ audio(); if (S.state==='flight' && S.fl && S.fl.done) return; look = { x:e.clientX, y:e.clientY, yaw:S.yaw, pitch:S.pitch, t:performance.now() }; try { canvas.setPointerCapture(e.pointerId); } catch(_){} });
 canvas.addEventListener('pointermove', e=>{ if (!look || S.state!=='aim') return; const k = 0.0042 * (68/camera.fov);
-  S.yaw = look.yaw - (e.clientX - look.x)*k; S.pitch = clamp(look.pitch - (e.clientY - look.y)*k, -0.6, 0.5); if (MV.held){ MV.yaw0 = S.yaw; MV.head0 = MV.R ? (headOf(MV.R) ?? MV.head0) : MV.head0; } prevDirty = true; updHud(); });
+  S.yaw = look.yaw - (e.clientX - look.x)*k; S.pitch = clamp(look.pitch - (e.clientY - look.y)*k, -0.6, 0.5); if (MV.held){ MV.yaw0 = S.yaw; MV.head0 = MV.R ? (headOf(MV.R) ?? MV.head0) : MV.head0; } syncDir(); prevDirty = true; updHud(); });
 canvas.addEventListener('pointerup', e=>{ if (look && performance.now() - look.t < 260 && Math.hypot(e.clientX-look.x, e.clientY-look.y) < 8 && S.state==='flight') S.skip = true; look = null; });
 
 // ---------------- throw metrics (TechDisc: speed, spin, advance ratio, nose, hyzer, launch, wobble + throw type, simulated flight) ----------------
@@ -834,7 +863,7 @@ function measure(p, sw, rel, nose){
   wob = clamp(wob, 0, 30);
   const spin = ar * v / R_DISC, aimL = aimLaunch();
   const launch = sw && SV.lnch && sw.launchM != null ? clamp(aimL + clamp(sw.launchM*0.5, -10, 12), -10, 30) : aimL;
-  const dir = sw ? (sw.dirM != null ? clamp(sw.dirM*0.3, -8, 8) : clamp(-sw.late*22*(type==='fh'?1:-1)*(SV.hand==='R'?1:-1), -15, 15)) : 0;
+  const dir = sw && SV.dirSwing ? (sw.dirM != null ? clamp(sw.dirM*0.3, -8, 8) : clamp(-sw.late*22*(type==='fh'?1:-1)*(SV.hand==='R'?1:-1), -15, 15)) : 0;
   const m = { v, spin, rpm:spin*60/(2*Math.PI), ar, nose, hyzer:rel, launch, wob, dir, type, style:st, disc:S.disc, p, late: sw ? sw.late : 0, sens: !!sw };
   m.tType = throwType(m);
   if (st !== 'putt'){ m.sim = simFlat(m).fwd; coach(m); }
@@ -1018,12 +1047,13 @@ function renderSet(){ $('iArm').value = SV.arm || 60; $('vArm').textContent = `$
   $('iSw').value = Math.round((SV.sw||1)*100); $('vSw').textContent = $('iSw').value + '%'; $('iWr').value = Math.round((SV.wr||1)*100); $('vWr').textContent = $('iWr').value + '%';
   $('iAn').value = Math.round((SV.an||1)*100); $('vAn').textContent = $('iAn').value + '%'; $('iDz').value = SV.dz; $('vDz').textContent = SV.dz + '°';
   $('uK').classList.toggle('on', SV.unit!=='mph'); $('uM').classList.toggle('on', SV.unit==='mph'); $('bVoice').classList.toggle('on', !!SV.voice);
-  $('bAimPh').classList.toggle('on', !!SV.aimPh); $('bAuto').classList.toggle('on', SV.autoRel !== false); $('bFlip').classList.toggle('on', !!SV.flipT); $('bAuto').textContent = SV.autoRel !== false ? '🖐 Wyrzut: automatyczny' : '🖐 Wyrzut: puszczeniem przycisku'; $('bLnch').classList.toggle('on', !!SV.lnch); }
+  $('bAimPh').classList.toggle('on', !!SV.aimPh); $('bDirS').classList.toggle('on', !!SV.dirSwing); $('bAuto').classList.toggle('on', SV.autoRel !== false); $('bFlip').classList.toggle('on', !!SV.flipT); $('bAuto').textContent = SV.autoRel !== false ? '🖐 Wyrzut: automatyczny' : '🖐 Wyrzut: puszczeniem przycisku'; $('bLnch').classList.toggle('on', !!SV.lnch); }
 for (const [id, key, div] of [['iArm','arm',1],['iSw','sw',100],['iWr','wr',100],['iAn','an',100],['iDz','dz',1]]) $(id).oninput = ()=>{ SV[key] = +$(id).value/div; save(); renderSet(); prevDirty = true; };
 $('uK').onclick = ()=>{ SV.unit = 'kmh'; save(); renderSet(); }; $('uM').onclick = ()=>{ SV.unit = 'mph'; save(); renderSet(); };
 $('bVoice').onclick = ()=>{ SV.voice = !SV.voice; save(); renderSet(); };
 $('bAuto').onclick = ()=>{ SV.autoRel = SV.autoRel === false; save(); renderSet(); msg(SV.autoRel ? 'Trzymasz przycisk przez cały rzut – dysk wylatuje sam w najszybszym momencie zamachu' : 'Dysk wylatuje, gdy puścisz przycisk', 2600); };
 $('bFlip').onclick = ()=>{ SV.flipT = !SV.flipT; save(); renderSet(); prevDirty = true; msg(SV.flipT ? 'Kierunek przechyłu odwrócony' : 'Kierunek przechyłu standardowy', 1800); };
+$('bDirS').onclick = ()=>{ SV.dirSwing = !SV.dirSwing; save(); renderSet(); };
 $('bAimPh').onclick = ()=>{ SV.aimPh = !SV.aimPh; save(); renderSet(); };
 $('bLnch').onclick = ()=>{ SV.lnch = !SV.lnch; save(); renderSet(); };
 $('bCal2').onclick = ()=>calibrate();
