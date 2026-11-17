@@ -107,14 +107,14 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
     <div id="tiltBox" class="glass hide"><span>Anhyzer</span><input id="tilt" type="range" min="-80" max="80" value="0"><span>Hyzer</span></div>
     <div id="dirBox" class="glass"><button id="dL">◀</button><input id="dirS" type="range" min="-60" max="60" step="1" value="0"><button id="dR">▶</button><span id="dirV">0°</span></div>
     <div class="row">
-      <div class="seg"><button id="bBH" class="on">BH</button><button id="bFH">FH</button></div>
+      <div class="seg"><button id="bBH" class="on">BH</button><button id="bFH">FH</button><button id="bPT">⛓️ Putt</button></div>
       <button id="bCal" class="glass">🎯 Kalibruj</button>
       <button id="bGentle" class="glass">Delikatny</button>
       <button id="bAim" class="glass">⛳ Na kosz</button>
     </div>
     <div id="discs"></div>
   </div>
-  <button id="hold"><svg id="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="5"/><circle id="arc" cx="50" cy="50" r="47" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 296" transform="rotate(-90 50 50)"/></svg>TRZYMAJ<small id="holdSub">celuj i machnij</small></button>
+  <button id="hold"><svg id="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="5"/><circle id="arcT" cx="50" cy="50" r="47" fill="none" stroke="#2fbf71" stroke-width="9" stroke-dasharray="0 296" transform="rotate(-90 50 50)" opacity="0"/><circle id="arc" cx="50" cy="50" r="47" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 296" transform="rotate(-90 50 50)"/></svg>TRZYMAJ<small id="holdSub">celuj i machnij</small></button>
 </div>
 
 <div id="start" class="card glass">
@@ -180,6 +180,7 @@ const PK = { nose:-0.03, uRef:25, tR0:0.17641, kD:5.5542, dA0:-0.20298, dBase:0.
 
 function armV(){ return (SV.arm || 60) * 0.44704; }
 function powerToSpeed(style, power){ // power 0..1
+  if (style === 'putt') return 3 + 12*Math.pow(power, 0.9);   // putts: ~13–65 km/h (push putt 5 m ≈ 30 km/h, spin putt 10 m ≈ 40 km/h)
   return STYLES[style].k * armV() * (0.07 + 0.93*Math.pow(power, 0.9));
 }
 
@@ -623,7 +624,8 @@ const lieMark = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.012, 24)
 const S = { mode:'round', state:'menu', hole:0, scores:[], strokes:0, lie:{ x:0, z:0 }, yaw:0, pitch:-0.04, disc:'f1', tech:'bh', wind:{ x:0, z:0, sp:0, a:0 }, lastP:0.7, fl:null, tilt:0, camT:0, inHand:true };
 function handSign(){ return (SV.hand==='R'?1:-1) * (S.tech==='bh'?1:-1); }
 function distToBasket(){ return Math.hypot(world.bx - S.lie.x, world.bz - S.lie.z); }
-function styleKey(){ const d = distToBasket(); if (d < 18) return 'putt'; if (S.tech==='fh') return d < 50 ? 'forestand' : 'fore'; return d < 45 ? 'stand' : 'xstep'; }
+function styleKey(){ const d = distToBasket(); if (S.putt) return 'putt'; if (S.tech==='fh') return d < 50 ? 'forestand' : 'fore'; return d < 45 ? 'stand' : 'xstep'; }
+function isPutt(){ return !!S.putt; }
 function msg(h, ms){ const el = $('msg'); el.innerHTML = h; el.classList.remove('hide'); clearTimeout(msg.t); if (ms) msg.t = setTimeout(()=>el.classList.add('hide'), ms); }
 function eye(){ return new THREE.Vector3(S.lie.x, groundH(S.lie.x, S.lie.z) + 1.66, S.lie.z); }
 function aimAtBasket(){ S.yaw = S.baseYaw = Math.atan2(world.bx - S.lie.x, world.bz - S.lie.z); setDirUI(0); const d = distToBasket(); S.pitch = d < 18 ? -0.05 : 0.02; }
@@ -631,7 +633,7 @@ function aimAtBasket(){ S.yaw = S.baseYaw = Math.atan2(world.bx - S.lie.x, world
 function setDirUI(v){ v = Math.round(v); const el = $('dirS'); if (el) el.value = v; const t = $('dirV'); if (t) t.textContent = v === 0 ? '0°' : Math.abs(v) + '° ' + (v > 0 ? 'P' : 'L'); }
 function setDir(v){ v = clamp(v, -60, 60); S.yaw = (S.baseYaw ?? S.yaw) - v*D2R; setDirUI(v); prevDirty = true; updHud(); }
 function syncDir(){ if (S.baseYaw == null) S.baseYaw = S.yaw; let v = wrapA(S.baseYaw - S.yaw)/D2R; if (Math.abs(v) > 60){ S.baseYaw = S.yaw; v = 0; } setDirUI(v); }
-function aimLaunch(){ return clamp(S.pitch*0.75 + 0.1, -0.08, 0.6) / D2R; }   // planned launch angle (deg) from where you look
+function aimLaunch(){ return (S.putt ? clamp(S.pitch*0.6 + 0.15, 0, 0.5) : clamp(S.pitch*0.75 + 0.1, -0.08, 0.6)) / D2R; }   // putts leave the hand rising a little more (lofted into the chains)   // planned launch angle (deg) from where you look
 
 function startRange(){ S.mode = 'range'; $('start').classList.add('hide'); buildHole('range'); S.strokes = 0; S.lie = { x:0, z:0.6 }; S.fl = null; S.wind = { x:0, z:0, sp:0, a:0 }; S.yaw = S.baseYaw = 0; setDirUI(0); S.pitch = 0.05; S.disc = 'd1'; renderDiscs(); enterAim(); msg('<b>Trening</b> – rzucaj, patrz na pomiary i tor lotu. Kosz stoi na 80 m.', 3500); }
 function startRound(){
@@ -644,12 +646,12 @@ function startHole(i){
   autoDisc(); enterAim(); msg(`<b>Dołek ${i+1}</b> · ${H.name} · ${H.len} m · par ${H.par}`, 2600);
 }
 function autoDisc(){ if (S.mode==='range'){ renderDiscs(); return; } const d = distToBasket(); S.disc = d < 18 ? 'p1' : d < 45 ? 'm1' : d < 75 ? 'f1' : d < 100 ? 'f2' : 'd1'; renderDiscs(); }
-function enterAim(){ S.state = 'aim'; S.inHand = true; arm.visible = true; flyDisc.visible = false; $('ctl').classList.remove('hide'); $('reticle').classList.remove('hide'); lieMark.visible = S.strokes > 0;
+function enterAim(){ autoPutt(); S.state = 'aim'; S.inHand = true; arm.visible = true; flyDisc.visible = false; $('ctl').classList.remove('hide'); $('reticle').classList.remove('hide'); lieMark.visible = S.strokes > 0;
   lieMark.position.set(S.lie.x, groundH(S.lie.x, S.lie.z) + 0.007, S.lie.z); setDiscLook(handDisc, DI[S.disc]); updHud(); prevDirty = true; }
 function updHud(){
   $('hHole').innerHTML = S.mode==='range' ? 'T<small>rening</small>' : `${S.hole+1}<small>/9</small>`; $('hPar').textContent = S.mode==='range' ? '–' : H.par; $('hDist').innerHTML = `${Math.round(distToBasket())}<small>m</small>`; $('hStr').textContent = S.strokes;
   $('hWind').textContent = S.wind.sp < 0.3 ? '0' : S.wind.sp.toFixed(1); $('wArr').style.transform = `rotate(${(-(Math.atan2(S.wind.x, S.wind.z) - S.yaw))*180/Math.PI + 180}deg)`;
-  $('holdSub').textContent = styleKey()==='putt' ? 'krótki putt' : 'celuj i machnij';
+  $('holdSub').textContent = S.putt ? 'pchnij do kosza' : 'celuj i machnij';
 }
 function renderDiscs(){
   $('discs').innerHTML = DISCS.map(d=>`<button class="glass${d.id===S.disc?' on':''}" data-d="${d.id}"><i style="background:${d.col}"></i><span>${d.name}<small>${d.speed}·${d.glide}·${d.turn}·${d.fade}</small></span></button>`).join('');
@@ -713,7 +715,7 @@ window.addEventListener('devicemotion', e=>{ const rr = e.rotationRate, la = e.a
   const vm = Math.hypot(MV.v[0], MV.v[1], MV.v[2]);
   if (MV.phase === 'aim'){
     if (w < 90 && MV.R){ const h = headOf(MV.R); if (h != null) MV.calm = { head:h, yaw:S.yaw, t }; }
-    if (w > 240 || a > 7) startSwing(t);
+    if (S.putt ? (w > 160 || a > 4.5) : (w > 240 || a > 7)) startSwing(t);
   } else if (MV.phase === 'swing'){
     if (w < 40 && a < 1){ MV.quietT += dt; if (MV.quietT > 0.7){ MV.phase = 'aim'; MV.peak = 0; setArc(0); MV.buf = []; MV.head0 = MV.calm ? MV.calm.head : MV.head0; MV.yaw0 = S.yaw; msg('Celuj dalej… potem <b>zamach</b> i puść', 0); } }
     else MV.quietT = 0;
@@ -723,24 +725,39 @@ window.addEventListener('devicemotion', e=>{ const rr = e.rotationRate, la = e.a
   if (MV.phase === 'swing'){ const p = powerOf(w, a, vm); if (p > MV.peak){ MV.peak = p; MV.tPeak = t; } setArc(MV.peak);
     // automatic release: the disc leaves the hand just after the fastest moment of the swing – the thumb stays on the button
     if (w > MV.wPk){ MV.wPk = w; MV.tW = t; }
+    if (vm > MV.vPk){ MV.vPk = vm; MV.tV = t; }
+    // putt: the arm pushes straight at the basket – the disc goes when the push stops accelerating (hand speed past its peak)
+    if (S.putt && SV.autoRel !== false && !MV.thrown && S.state === 'aim' && t - MV.swingT > 90 && MV.vPk > 0.45 && vm < MV.vPk*0.7 && t - MV.tV > 25){
+      MV.thrown = true; MV.phase = 'done'; if (navigator.vibrate) try { navigator.vibrate(30); } catch(_){} releaseAt(Math.min(t, MV.tV + 20), 'swing'); }
     if (SV.autoRel !== false && !MV.thrown && S.state === 'aim' && t - MV.swingT > 110 && MV.wPk > Math.max(200, 0.22*limits().W1) && w < MV.wPk*0.6 && t - MV.tW > 20){
       MV.thrown = true; MV.phase = 'done'; if (navigator.vibrate) try { navigator.vibrate(35); } catch(_){} releaseAt(Math.min(t, MV.tW + 25), 'swing'); } }
 });
 function startSwing(t){
-  MV.phase = 'swing'; MV.swingT = t; MV.quietT = 0; MV.peak = 0; MV.tPeak = 0; MV.wPk = 0; MV.tW = t;
+  MV.phase = 'swing'; MV.swingT = t; MV.quietT = 0; MV.peak = 0; MV.tPeak = 0; MV.wPk = 0; MV.tW = t; MV.vPk = 0; MV.tV = t;
   const c = MV.calm || { head:MV.head0, yaw:S.yaw }; MV.F = c.head; if (SV.aimPh) S.yaw = c.yaw; prevDirty = true;
-  msg(SV.autoRel !== false ? 'Zamach… <b>trzymaj przycisk</b> – dysk wyleci sam' : 'Zamach… <b>puść</b> w momencie wyrzutu', 0);
+  msg(S.putt ? (SV.autoRel !== false ? 'Pchnij… <b>trzymaj przycisk</b> – dysk wyleci sam' : 'Pchnij i <b>puść</b> przy wyciągniętej ręce') : SV.autoRel !== false ? 'Zamach… <b>trzymaj przycisk</b> – dysk wyleci sam' : 'Zamach… <b>puść</b> w momencie wyrzutu', 0);
 }
 async function askPerm(){
   if (MV.perm) return; MV.perm = true;
   try { if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') await DeviceMotionEvent.requestPermission();
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') await DeviceOrientationEvent.requestPermission(); } catch(e){}
 }
-function limits(){ const putt = styleKey()==='putt', k = (SV.gentle ? 0.55 : 1) * (putt ? 0.42 : 1) / (SV.sw || 1); return { W0:110, W1:110 + 1250*k, A0:3, A1:3 + 28*k, V0:0.8, V1:0.8 + 8.5*k }; }
+function limits(){ const putt = styleKey()==='putt', k = (SV.gentle ? 0.55 : 1) * (putt ? 0.42 : 1) / (SV.sw || 1);
+  if (putt) return { W0:90, W1:90 + 1500*k, A0:2, A1:2 + 30*k, V0:0.3, V1:0.3 + 7*k };
+  return { W0:110, W1:110 + 1250*k, A0:3, A1:3 + 28*k, V0:0.8, V1:0.8 + 8.5*k }; }
 function powerOf(w, a, v){ const L = limits(); return clamp(Math.max((w-L.W0)/(L.W1-L.W0), (a-L.A0)/(L.A1-L.A0), v != null ? 0.95*(v-L.V0)/(L.V1-L.V0) : 0), 0, 1); }
 function setArc(p){ const el = $('arc'); el.setAttribute('stroke-dasharray', `${(p*295).toFixed(1)} 296`); el.setAttribute('stroke', p > 0.95 ? '#ff5a3c' : p > 0.7 ? '#ffd36b' : '#fff'); }
 function useFallback(on){ MV.fallback = on; $('tiltBox').classList.toggle('hide', !on); }
 
+// putt strength guide: green band on the ring = power that carries the disc into the middle of the chains
+function puttNeed(){ const d = distToBasket(), m0 = { launch:aimLaunch(), hyzer:0, nose:0, dir:0, ar:0.4, wob:0, style:'putt', type:'bh', disc:S.disc };
+  const hAt = p=>{ const m = Object.assign({}, m0, { p, v:powerToSpeed('putt', p) }), f = launchState(m, false), x0 = f.p[0], z0 = f.p[2];
+    for (let t=0; t<6; t+=1/120){ flightStep(f, f.disc, 1/120, windVec()); if (Math.hypot(f.p[0]-x0, f.p[2]-z0) >= d) return f.p[1] - world.by; if (f.p[1] < groundH(f.p[0], f.p[2])) return -5; } return -5; };
+  const tgt = 0.95; let lo = 0, hi = 1; if (hAt(1) < tgt) return null;
+  for (let i=0; i<16; i++){ const mid = (lo+hi)/2; if (hAt(mid) < tgt) lo = mid; else hi = mid; } return (lo+hi)/2; }
+function showPuttBand(){ const el = $('arcT'); if (!S.putt){ el.setAttribute('opacity', 0); return; } const p = puttNeed(); S.puttP = p;
+  if (p == null){ el.setAttribute('opacity', 0); return; } const a = clamp(p - 0.05, 0, 1), b = clamp(p + 0.05, 0, 1);
+  el.setAttribute('stroke-dasharray', `0 ${(a*295).toFixed(1)} ${((b-a)*295).toFixed(1)} 400`); el.setAttribute('opacity', 0.55); }
 const hold = $('hold');
 hold.addEventListener('contextmenu', e=>e.preventDefault());
 hold.addEventListener('pointerdown', async e=>{ e.preventDefault(); if (S.state!=='aim') return; audio(); try { hold.setPointerCapture(e.pointerId); } catch(_){}
@@ -754,7 +771,8 @@ function startHold(keyboard){
   useFallback(keyboard || !(MV.got && MV.motion && MV.R));
   if (MV.fallback){ MV.phase = 'meter'; $('meter').classList.remove('hide'); msg('Puść, gdy miernik mocy jest tam, gdzie chcesz', 0); }
   else { MV.phase = 'aim'; const h = headOf(MV.R); MV.head0 = h != null ? h : MV.lastHead; MV.yaw0 = S.yaw; MV.calm = { head:MV.head0, yaw:S.yaw, t:MV.t0 }; MV.F = null;
-    msg(SV.aimPh ? 'Celuj telefonem, ustaw <b>hyzer / anhyzer</b> – potem zamach i puść' : 'Ustaw <b>hyzer / anhyzer</b> – potem zamach i puść', 0); }
+    msg(S.putt ? 'Putt: trzymaj dysk <b>płasko</b>, patrz na łańcuchy i płynnie <b>pchnij telefon w stronę kosza</b>' : SV.aimPh ? 'Celuj telefonem, ustaw <b>hyzer / anhyzer</b> – potem zamach i puść' : 'Ustaw <b>hyzer / anhyzer</b> – potem zamach i puść', 0);
+    showPuttBand(); }
   if (navigator.vibrate) try { navigator.vibrate(12); } catch(_){}
 }
 function updateAimHold(){ // the phone heading steers the view while you aim (before the swing)
@@ -764,7 +782,7 @@ function updateAimHold(){ // the phone heading steers the view while you aim (be
 }
 function fallbackPower(){ const t = (performance.now() - MV.t0)/1000, u = (t / 1.2) % 2; return u < 1 ? u : 2 - u; }
 function endHold(cancel){
-  if (!MV.held) return; MV.held = false; hold.classList.remove('on'); $('meter').classList.add('hide');
+  if (!MV.held) return; MV.held = false; $('arcT').setAttribute('opacity', 0); hold.classList.remove('on'); $('meter').classList.add('hide');
   const phase = MV.phase; MV.phase = 'idle';
   if (cancel || S.state!=='aim'){ setArc(0); $('msg').classList.add('hide'); return; }
   if (MV.thrown){ MV.thrown = false; return; }               // the disc already left the hand during the swing
@@ -808,8 +826,12 @@ $('dirS').oninput = e=>{ if (S.state==='aim') setDir(+e.target.value); };
   const stop = ()=>{ clearTimeout(tm); clearInterval(tm); tm = null; };
   $(id).addEventListener('pointerdown', e=>{ e.preventDefault(); step(); stop(); tm = setTimeout(()=>{ tm = setInterval(step, 70); }, 380); });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev=>$(id).addEventListener(ev, stop)); });
-$('bBH').onclick = ()=>{ S.tech = 'bh'; $('bBH').classList.add('on'); $('bFH').classList.remove('on'); prevDirty = true; };
-$('bFH').onclick = ()=>{ S.tech = 'fh'; $('bFH').classList.add('on'); $('bBH').classList.remove('on'); prevDirty = true; };
+function setTech(t){ S.putt = t === 'putt'; S.tech = t === 'fh' ? 'fh' : 'bh'; S.puttUser = true;
+  $('bBH').classList.toggle('on', t === 'bh'); $('bFH').classList.toggle('on', t === 'fh'); $('bPT').classList.toggle('on', t === 'putt'); prevDirty = true; if (S.state === 'aim') updHud(); }
+$('bBH').onclick = ()=>setTech('bh'); $('bFH').onclick = ()=>setTech('fh'); $('bPT').onclick = ()=>setTech('putt');
+// inside the circle the putter comes out by itself, far away it goes back to the throw you used – the button always wins until the next lie
+function autoPutt(){ const d = distToBasket(); S.puttUser = false; const on = d <= 12 ? true : d > 22 ? false : !!S.putt; if (on !== !!S.putt){ S.putt = on; if (on) S.tech = 'bh'; }
+  $('bBH').classList.toggle('on', !S.putt && S.tech === 'bh'); $('bFH').classList.toggle('on', !S.putt && S.tech === 'fh'); $('bPT').classList.toggle('on', !!S.putt); }
 $('tilt').oninput = ()=>{ prevDirty = true; };
 
 const inFrame = (()=>{ try { return window.self !== window.top; } catch(e){ return true; } })();
@@ -866,6 +888,7 @@ function measure(p, sw, rel, nose){
   const dir = sw && SV.dirSwing ? (sw.dirM != null ? clamp(sw.dirM*0.3, -8, 8) : clamp(-sw.late*22*(type==='fh'?1:-1)*(SV.hand==='R'?1:-1), -15, 15)) : 0;
   const m = { v, spin, rpm:spin*60/(2*Math.PI), ar, nose, hyzer:rel, launch, wob, dir, type, style:st, disc:S.disc, p, late: sw ? sw.late : 0, sens: !!sw };
   m.tType = throwType(m);
+  if (st === 'putt') m.pStyle = (sw ? clamp(sw.wrist/(0.6*limits().W1), 0, 1.3) > 0.5 : ar > 0.42) ? 'spin putt' : 'push putt';
   if (st !== 'putt'){ m.sim = simFlat(m).fwd; coach(m); }
   return m;
 }
@@ -899,7 +922,7 @@ function showMetrics(m){
   const dist = (x)=> x == null ? '–' : `${Math.round(x)}<small>m</small>`;
   $('metG').innerHTML = T('v','Prędkość', fmtSpeed(m.v)) + T('rpm','Spin', `${Math.round(m.rpm)}<small>rpm</small>`) + T('ar','Advance', `${Math.round(m.ar*100)}<small>%</small>`) + T('wob','Wobble', `${m.wob.toFixed(1)}<small>°</small>`)
     + T('nose','Nos', `${m.nose > 0 ? '+' : ''}${m.nose.toFixed(1)}<small>°</small>`) + T('hy','Hyzer', hy) + T('launch','Launch', `${m.launch.toFixed(1)}<small>°</small>`) + T('dir','Kierunek', Math.abs(m.dir) < 0.5 ? '0°' : `${Math.abs(m.dir).toFixed(0)}°<small>${m.dir > 0 ? 'P' : 'L'}</small>`)
-    + T('t','Rzut', `${m.type==='fh'?'FH':'BH'}<small>${m.style==='putt' ? 'putt' : m.tType}</small>`) + T('sim','Sym. lot', dist(m.sim)) + T('pot','Potencjał', dist(m.pot)) + T('p','Moc', `${Math.round(m.p*100)}<small>%</small>`);
+    + T('t','Rzut', `${m.type==='fh'?'FH':'BH'}<small>${m.style==='putt' ? (m.pStyle || 'putt') : m.tType}</small>`) + T('sim','Sym. lot', dist(m.sim)) + T('pot','Potencjał', dist(m.pot)) + T('p','Moc', `${Math.round(m.p*100)}<small>%</small>`);
   $('metTip').innerHTML = tipFor(m); $('met').classList.remove('hide');
   if (SV.voice && 'speechSynthesis' in window){ try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(`${SV.unit==='mph' ? Math.round(m.v*2.23694)+' mil na godzinę' : Math.round(m.v*3.6)+' kilometrów na godzinę'}, ${Math.round(m.rpm)} obrotów, nos ${m.nose.toFixed(0)} stopni, ${Math.abs(m.hyzer).toFixed(0)} stopni ${m.hyzer >= 0 ? 'hyzer' : 'anhyzer'}, wobble ${m.wob.toFixed(0)}`); u.lang = 'pl-PL'; speechSynthesis.speak(u); } catch(e){} }
 }
@@ -961,7 +984,7 @@ function collideBasket(f){
   if (r > 0.6 || f.cool > 0) return;
   if (r < 0.05 && y < 1.45){ f.v[0] = -f.v[0]*0.3; f.v[2] = -f.v[2]*0.3; f.cool = 0.15; SFX.pole(); return; }
   if (y > 0.6 && y < 1.33 && r < 0.3){
-    if (sp > 17 && prand() < 0.5){ f.v[0] = -f.v[0]*0.2 + (prand()-0.5)*2; f.v[2] = -f.v[2]*0.2 + (prand()-0.5)*2; f.v[1] = -1; f.cool = 0.3; SFX.chains(); msg('Odbił się od łańcuchów!', 1500); return; }
+    if ((sp > 17 && prand() < 0.5) || (r > 0.21 && sp > 11 && prand() < 0.4)){ f.v[0] = -f.v[0]*0.2 + (prand()-0.5)*2; f.v[2] = -f.v[2]*0.2 + (prand()-0.5)*2; f.v[1] = -1; f.cool = 0.3; SFX.chains(); msg('Odbił się od łańcuchów!', 1500); return; }
     f.inBasket = true; f.done = true; f.p = [world.bx + dx*0.3, world.by + 0.62, world.bz + dz*0.3]; f.v = [0,0,0]; SFX.chains(); return; }
   if (y > 0.56 && y < 0.78 && r < 0.33 && f.v[1] <= 0){ f.inBasket = true; f.done = true; f.p = [world.bx + dx*0.6, world.by + 0.62, world.bz + dz*0.6]; f.v = [0,0,0]; SFX.chains(); return; }
   if (y > 1.3 && y < 1.43 && r > 0.26 && r < 0.36){ f.v[1] = Math.abs(f.v[1])*0.3 + 1; f.v[0] *= 0.5; f.v[2] *= 0.5; f.cool = 0.15; SFX.pole(); }
@@ -1111,7 +1134,7 @@ function updatePreview(LA){
   if (S.state !== 'aim'){ prevLine.visible = false; prevRing.visible = false; return; }
   if (Math.abs(LA.rel - lastRel) > 1 || Math.abs(LA.nose - lastNose) > 1) prevDirty = true;
   const now = performance.now(); if (!prevDirty || now - prevAt < 120) return; prevDirty = false; prevAt = now; lastRel = LA.rel; lastNose = LA.nose;
-  const st = styleKey(), p = S.lastP || 0.7, m = { v:powerToSpeed(st, p), launch:aimLaunch(), hyzer:LA.rel, nose:LA.nose, dir:0, ar:arT(S.tech), wob:0, style:st, type:S.tech, disc:S.disc, p };
+  const st = styleKey(), p = st === 'putt' ? ((S.puttP = puttNeed()) ?? 1) : (S.lastP || 0.7), m = { v:powerToSpeed(st, p), launch:aimLaunch(), hyzer:LA.rel, nose:LA.nose, dir:0, ar:arT(S.tech), wob:0, style:st, type:S.tech, disc:S.disc, p };
   const f = launchState(m, false);
   const a = prevGeo.attributes.position.array; let n = 0;
   for (let t=0; t<10 && n<400; t+=1/60){ flightStep(f, f.disc, 1/60, windVec()); a[n*3] = f.p[0]; a[n*3+1] = f.p[1]; a[n*3+2] = f.p[2]; n++; if (f.p[1] <= groundH(f.p[0], f.p[2]) + 0.02) break; }
@@ -1137,13 +1160,20 @@ function updateCamera(dt){
 function updateArm(dt, LA){
   // the disc in the hand mirrors the phone: roll = hyzer / anhyzer, pitch = nose; swing animation while holding / after release
   const rel = S.state==='aim' ? LA.rel : 0, nose = S.state==='aim' ? LA.nose : 0, hs = handSign();
-  const tgtRoll = hs*rel*D2R*0.9*(SV.hand==='R' ? 1 : -1), tgtPitch = (nose + 1.5)*D2R*1.4;
+  const tgtRoll = hs*rel*D2R*0.9*(SV.hand==='R' ? 1 : -1), tgtPitch = (nose + 1.5)*D2R*1.4 + (S.putt ? 0.12 : 0);
   wrist.rotation.z += (tgtRoll - wrist.rotation.z)*Math.min(1, dt*10); wrist.rotation.x += (tgtPitch - wrist.rotation.x)*Math.min(1, dt*10);
   const mirror = SV.hand==='R' ? 1 : -1; arm.scale.x = mirror;
   let tx = ARM_REST.x, ty = ARM_REST.y, tz = ARM_REST.z, ry = 0;
+  if (S.putt){ // putting stance: disc in front of the chest, hand on its outer rim, arm reaching toward the chains
+    tx = 0.07; ty = -0.22; tz = -0.5; ry = 0.75;
+    if (MV.held && (MV.phase === 'swing' || MV.fallback)){ const pk = MV.fallback ? fallbackPower() : MV.peak; tz = -0.4 - 0.18*pk; ty = -0.25 + 0.05*pk; }
+    else if (MV.held){ ty = -0.2; tz = -0.47; }
+    if (S.state==='flight' && S.armSwing){ S.armSwing += dt; const u = Math.min(1, S.armSwing/0.45); tz = -0.5 - 0.3*u; ty = -0.22 + 0.1*u; tx = 0.05; if (u >= 1){ arm.visible = false; S.armSwing = 0; } }
+  } else {
   if (MV.held && (MV.phase === 'swing' || MV.fallback)){ const pk = MV.fallback ? fallbackPower() : MV.peak; if (S.tech==='bh'){ tx = -0.05 - 0.1*pk; tz = -0.36; ry = 0.9; } else { tx = 0.36; tz = -0.34; ry = -0.6; } ty = -0.27; }
   else if (MV.held){ ty = -0.17; tz = -0.44; }   // aiming: disc lifted a bit into view so you can see its angle
   if (S.state==='flight' && S.armSwing){ S.armSwing += dt; const u = Math.min(1, S.armSwing/0.35); tx = (S.tech==='bh' ? 0.15 + 0.3*u : 0.2 - 0.1*u); tz = -0.6; ty = -0.2 - 0.2*u; if (u >= 1){ arm.visible = false; S.armSwing = 0; } }
+  }
   arm.position.x += (tx*mirror - arm.position.x)*Math.min(1, dt*12); arm.position.y += (ty - arm.position.y)*Math.min(1, dt*12); arm.position.z += (tz - arm.position.z)*Math.min(1, dt*12);
   arm.rotation.y += (ry*mirror - arm.rotation.y)*Math.min(1, dt*10);
   handDisc.visible = S.state==='aim';
