@@ -138,7 +138,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
   <div class="sl"><span>Nadgarstek – rotacja (spin)</span><b id="vWr">100%</b><input id="iWr" type="range" min="50" max="200" step="5"><small>Ile obrotów daje strzał nadgarstkiem przy wyrzucie</small></div>
   <div class="sl"><span>Kąty – hyzer i nos</span><b id="vAn">100%</b><input id="iAn" type="range" min="50" max="200" step="5"><small>100% = przechył telefonu 1:1 z przechyłem dysku. Wyżej = mniejszy ruch nadgarstka daje większy kąt.</small></div>
   <div class="sl"><span>Martwa strefa „płasko”</span><b id="vDz">2°</b><input id="iDz" type="range" min="0" max="10" step="1"><small>Przechył mniejszy niż ta wartość liczy się jako rzut płaski</small></div>
-  <div class="row" style="justify-content:center;margin:6px 0"><button id="bAuto" class="glass">🖐 Wyrzut automatyczny</button><button id="bAimPh" class="glass">📱 Celowanie telefonem</button><button id="bLnch" class="glass">↗ Launch z zamachu</button></div>
+  <div class="row" style="justify-content:center;margin:6px 0"><button id="bAuto" class="glass">🖐 Wyrzut automatyczny</button><button id="bFlip" class="glass">⇄ Odwróć hyzer/anhyzer</button><button id="bAimPh" class="glass">📱 Celowanie telefonem</button><button id="bLnch" class="glass">↗ Launch z zamachu</button></div>
   <div class="row" style="justify-content:center;margin:6px 0"><div class="seg"><button id="uK">km/h</button><button id="uM">mph</button></div><button id="bVoice" class="glass">🔊 Głos</button><button id="bCal2" class="glass">🎯 Kalibruj</button></div>
   <p style="font-size:11px;text-align:left;opacity:.75;margin:4px 0">Kalibracja jest opcjonalna: zapisuje Twój naturalny chwyt jako „płasko, nos 0”. Bez niej płasko = ekran dokładnie poziomo.</p>
   <button class="btn" id="setOk">GOTOWE</button></div>
@@ -655,7 +655,7 @@ function discAngles(R, head){ // tilt toward the thrower's left (+) and nose-up 
   return { tilt: Math.asin(clamp(n[0]*Lf[0] + n[1]*Lf[1], -1, 1))/D2R, pitch: Math.asin(clamp(-(n[0]*F[0] + n[1]*F[1]), -1, 1))/D2R };
 }
 function anglesFrom(R, head){
-  const d = discAngles(R, head); let tilt = (d.tilt - (SV.cT||0)) * (SV.an||1);
+  const d = discAngles(R, head); let tilt = (d.tilt - (SV.cT||0)) * (SV.an||1) * (SV.flipT ? -1 : 1);
   tilt = Math.sign(tilt)*Math.max(0, Math.abs(tilt) - (SV.dz||0));
   return { rel: clamp(handSign()*tilt, -85, 85), nose: clamp(-1.5 + (d.pitch - (SV.cP||0))*0.55*(SV.an||1), -15, 20), pitch:d.pitch };
 }
@@ -1018,11 +1018,12 @@ function renderSet(){ $('iArm').value = SV.arm || 60; $('vArm').textContent = `$
   $('iSw').value = Math.round((SV.sw||1)*100); $('vSw').textContent = $('iSw').value + '%'; $('iWr').value = Math.round((SV.wr||1)*100); $('vWr').textContent = $('iWr').value + '%';
   $('iAn').value = Math.round((SV.an||1)*100); $('vAn').textContent = $('iAn').value + '%'; $('iDz').value = SV.dz; $('vDz').textContent = SV.dz + '°';
   $('uK').classList.toggle('on', SV.unit!=='mph'); $('uM').classList.toggle('on', SV.unit==='mph'); $('bVoice').classList.toggle('on', !!SV.voice);
-  $('bAimPh').classList.toggle('on', !!SV.aimPh); $('bAuto').classList.toggle('on', SV.autoRel !== false); $('bAuto').textContent = SV.autoRel !== false ? '🖐 Wyrzut: automatyczny' : '🖐 Wyrzut: puszczeniem przycisku'; $('bLnch').classList.toggle('on', !!SV.lnch); }
+  $('bAimPh').classList.toggle('on', !!SV.aimPh); $('bAuto').classList.toggle('on', SV.autoRel !== false); $('bFlip').classList.toggle('on', !!SV.flipT); $('bAuto').textContent = SV.autoRel !== false ? '🖐 Wyrzut: automatyczny' : '🖐 Wyrzut: puszczeniem przycisku'; $('bLnch').classList.toggle('on', !!SV.lnch); }
 for (const [id, key, div] of [['iArm','arm',1],['iSw','sw',100],['iWr','wr',100],['iAn','an',100],['iDz','dz',1]]) $(id).oninput = ()=>{ SV[key] = +$(id).value/div; save(); renderSet(); prevDirty = true; };
 $('uK').onclick = ()=>{ SV.unit = 'kmh'; save(); renderSet(); }; $('uM').onclick = ()=>{ SV.unit = 'mph'; save(); renderSet(); };
 $('bVoice').onclick = ()=>{ SV.voice = !SV.voice; save(); renderSet(); };
 $('bAuto').onclick = ()=>{ SV.autoRel = SV.autoRel === false; save(); renderSet(); msg(SV.autoRel ? 'Trzymasz przycisk przez cały rzut – dysk wylatuje sam w najszybszym momencie zamachu' : 'Dysk wylatuje, gdy puścisz przycisk', 2600); };
+$('bFlip').onclick = ()=>{ SV.flipT = !SV.flipT; save(); renderSet(); prevDirty = true; msg(SV.flipT ? 'Kierunek przechyłu odwrócony' : 'Kierunek przechyłu standardowy', 1800); };
 $('bAimPh').onclick = ()=>{ SV.aimPh = !SV.aimPh; save(); renderSet(); };
 $('bLnch').onclick = ()=>{ SV.lnch = !SV.lnch; save(); renderSet(); };
 $('bCal2').onclick = ()=>calibrate();
@@ -1106,7 +1107,7 @@ function updateCamera(dt){
 function updateArm(dt, LA){
   // the disc in the hand mirrors the phone: roll = hyzer / anhyzer, pitch = nose; swing animation while holding / after release
   const rel = S.state==='aim' ? LA.rel : 0, nose = S.state==='aim' ? LA.nose : 0, hs = handSign();
-  const tgtRoll = -hs*rel*D2R*0.9, tgtPitch = (nose + 1.5)*D2R*1.4;
+  const tgtRoll = hs*rel*D2R*0.9*(SV.hand==='R' ? 1 : -1), tgtPitch = (nose + 1.5)*D2R*1.4;
   wrist.rotation.z += (tgtRoll - wrist.rotation.z)*Math.min(1, dt*10); wrist.rotation.x += (tgtPitch - wrist.rotation.x)*Math.min(1, dt*10);
   const mirror = SV.hand==='R' ? 1 : -1; arm.scale.x = mirror;
   let tx = ARM_REST.x, ty = ARM_REST.y, tz = ARM_REST.z, ry = 0;
