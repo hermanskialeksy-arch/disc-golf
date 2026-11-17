@@ -130,7 +130,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
 <div id="holed" class="card glass hide"><h2 id="hoT">Par</h2><p id="hoS"></p><button class="btn" id="next">NASTĘPNY DOŁEK</button></div>
 <div id="sc" class="card glass hide"><h2>Karta wyników</h2><div class="big" id="scTot">+0</div><table id="scT"></table><button class="btn" id="again">ZAGRAJ JESZCZE RAZ</button></div>
 <div id="pause" class="card glass hide"><h2>Pauza</h2><button class="btn" id="resume">WRÓĆ DO GRY</button><button class="btn ghost" id="pSet">⚙ Czujniki i czułość</button><button class="btn ghost" id="pStats">📊 Statystyki rzutów</button><button class="btn ghost" id="restartH">Zagraj dołek od nowa</button><button class="btn ghost" id="toMenu">Menu główne</button></div>
-<div id="sens" class="card glass hide"><h2>Czujniki ruchu zablokowane</h2><p>Przeglądarka nie przekazuje grze danych z żyroskopu, bo gra jest otwarta w ramce wewnątrz aplikacji Claude. Otwórz ją w osobnej karcie – wtedy machanie telefonem zadziała.</p><button class="btn" id="openTab">OTWÓRZ W NOWEJ KARCIE</button><p id="sensUrl" style="font-size:11px;word-break:break-all;opacity:.75;user-select:text;-webkit-user-select:text"></p><p style="font-size:11.5px;text-align:left">W Brave wyłącz też tarczę (ikona lwa) dla tej strony – blokowanie odcisku palca potrafi wyłączyć czujniki.</p><button class="btn ghost" id="sensOk">GRAJ Z MIERNIKIEM MOCY</button></div>
+<div id="sens" class="card glass hide"><h2>Czujniki ruchu zablokowane</h2><p id="sensWhy">Przeglądarka nie przekazuje grze danych z żyroskopu.</p><p style="font-size:12px;text-align:left">Zezwól stronie na <b>czujniki ruchu</b>: stuknij ikonę po lewej stronie adresu → Uprawnienia / Ustawienia witryny → <b>Czujniki ruchu → Zezwalaj</b>, potem odśwież. Brave domyślnie je blokuje – w Chrome działają od razu.</p><button class="btn" id="openTab">OTWÓRZ W NOWEJ KARCIE</button><p id="sensUrl" style="font-size:11px;word-break:break-all;opacity:.75;user-select:text;-webkit-user-select:text"></p><p style="font-size:11.5px;text-align:left">W Brave wyłącz też tarczę (ikona lwa) dla tej strony – blokowanie odcisku palca potrafi wyłączyć czujniki.</p><button class="btn ghost" id="sensOk">GRAJ Z MIERNIKIEM MOCY</button></div>
 <div id="met" class="glass hide"><div class="g" id="metG"></div><div class="tip" id="metTip"></div></div>
 <div id="setC" class="card glass hide"><h2>Czujniki i czułość</h2>
   <div class="sl"><span>Twoja prędkość ramienia (pełny zamach)</span><b id="vArm">60 mph</b><input id="iArm" type="range" min="40" max="80" step="1"><small>Amator ~45–55 mph, dobry gracz ~60 mph (≈120 m), zawodowiec 70+ mph. Pełny zamach telefonem = ta prędkość wyrzutu.</small></div>
@@ -773,7 +773,12 @@ $('bBH').onclick = ()=>{ S.tech = 'bh'; $('bBH').classList.add('on'); $('bFH').c
 $('bFH').onclick = ()=>{ S.tech = 'fh'; $('bFH').classList.add('on'); $('bBH').classList.remove('on'); prevDirty = true; };
 $('tilt').oninput = ()=>{ prevDirty = true; };
 
-function showSens(){ $('sensUrl').textContent = location.href; $('sens').classList.remove('hide'); }
+const inFrame = (()=>{ try { return window.self !== window.top; } catch(e){ return true; } })();
+function showSens(){ $('sensUrl').textContent = location.href; $('openTab').classList.toggle('hide', !inFrame); $('sensUrl').classList.toggle('hide', !inFrame);
+  $('sensWhy').textContent = inFrame ? 'Gra jest otwarta w ramce (np. w aplikacji Claude), która blokuje żyroskop. Otwórz ją w osobnej karcie albo pod adresem z GitHub Pages.' : 'Przeglądarka nie przekazuje grze danych z żyroskopu – zwykle to zablokowane uprawnienie strony.';
+  $('sens').classList.remove('hide'); }
+// as soon as motion data arrives (e.g. after allowing the permission), hide the warning and switch to motion control
+window.addEventListener('devicemotion', function once(){ window.removeEventListener('devicemotion', once); if (!$('sens').classList.contains('hide')){ $('sens').classList.add('hide'); msg('Czujniki działają ✓ – przechyl telefon', 2000); } if (!MV.held) useFallback(false); });
 $('openTab').onclick = ()=>{ let w = null; try { w = window.open(location.href, '_blank'); } catch(e){}
   if (!w){ try { navigator.clipboard.writeText(location.href); msg('Adres skopiowany – wklej go w nowej karcie przeglądarki', 3500); } catch(e){ msg('Skopiuj adres spod przycisku i otwórz go w nowej karcie', 3500); } } };
 $('sensOk').onclick = ()=>{ $('sens').classList.add('hide'); useFallback(true); };
